@@ -1,5 +1,5 @@
 const express = require("express");
-const Blog = require("../models/Blog");
+const Blog = require("../models/Blog.js");
 const multer = require("multer");
 const fs = require('fs');
 const path = require('path');
@@ -55,16 +55,33 @@ router.put("/:id", upload.single("coverImage"), async (req, res) => {
     const { title, description } = req.body;
     const coverImage = req.file ? req.file.path : null;
 
+    // Find the existing blog
+    const existingBlog = await Blog.findById(req.params.id);
+    if (!existingBlog) return res.status(404).json({ error: "Blog not found" });
+
+    // Construct the image file path
+    const imagePath = path.join(__dirname, "..", existingBlog.coverImage);
+
+    // Check if the file exists and delete it
+    if (fs.existsSync(imagePath)) {
+      fs.unlinkSync(imagePath); // Synchronous deletion
+      console.log("Image deleted successfully");
+    } else {
+      console.log("Image file not found");
+    }
+
+    // Prepare updated data
     const updatedData = { title, description };
     if (coverImage) updatedData.coverImage = coverImage;
 
-    const blog = await Blog.findByIdAndUpdate(req.params.id, updatedData, {
+    // Update the blog with new data
+    const updatedBlog = await Blog.findByIdAndUpdate(req.params.id, updatedData, {
       new: true,
     });
 
-    if (!blog) return res.status(404).json({ error: "Blog not found" });
-    res.status(200).json(blog);
+    res.status(200).json(updatedBlog);
   } catch (error) {
+    console.error("Error updating blog:", error);
     res.status(500).json({ error: "Failed to update blog post" });
   }
 });
