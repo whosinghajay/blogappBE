@@ -1,6 +1,8 @@
 const express = require("express");
 const Blog = require("../models/Blog");
 const multer = require("multer");
+const fs = require('fs');
+const path = require('path');
 
 const router = express.Router();
 
@@ -70,8 +72,21 @@ router.put("/:id", upload.single("coverImage"), async (req, res) => {
 // Delete a blog post
 router.delete("/:id", async (req, res) => {
   try {
-    const blog = await Blog.findByIdAndDelete(req.params.id);
+    const blog = await Blog.findById(req.params.id);
     if (!blog) return res.status(404).json({ error: "Blog not found" });
+    // Construct the image file path
+    const imagePath = path.join(__dirname, '..', blog.coverImage);
+
+    // Check if the file exists and delete it
+    if (fs.existsSync(imagePath)) {
+      fs.unlinkSync(imagePath); // Synchronous deletion
+      console.log("Image deleted successfully");
+    } else {
+      console.log("Image file not found");
+    }
+
+    await blog.deleteOne();
+
     res.status(200).json({ message: "Blog deleted successfully" });
   } catch (error) {
     res.status(500).json({ error: "Failed to delete blog post" });
